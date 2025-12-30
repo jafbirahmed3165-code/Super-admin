@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Admin Hub</title>
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --bg-dark: #1a1a2e;
+            --sidebar-bg: #16213e;
+            --accent: #e94560;
+            --text: #ffffff;
+            --header-height: 60px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+
+        body { display: flex; height: 100vh; overflow: hidden; background: var(--bg-dark); color: var(--text); }
+
+        /* --- MOBILE HEADER --- */
+        .mobile-header {
+            display: none;
+            height: var(--header-height);
+            background: var(--sidebar-bg);
+            align-items: center;
+            padding: 0 15px;
+            position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+            border-bottom: 1px solid #333;
+            justify-content: space-between;
+        }
+        .menu-btn { font-size: 24px; background: none; border: none; color: white; cursor: pointer; }
+        .mobile-title { font-weight: bold; color: var(--accent); }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-bg);
+            display: flex; flex-direction: column;
+            border-right: 1px solid #333;
+            z-index: 30; height: 100vh;
+            transition: transform 0.3s ease;
+        }
+
+        .brand {
+            padding: 20px; font-size: 18px; font-weight: bold; text-align: center;
+            border-bottom: 1px solid #333; background: #0f1c30; color: var(--accent);
+            height: var(--header-height); display: flex; align-items: center; justify-content: center;
+        }
+
+        .client-list { flex: 1; overflow-y: auto; padding: 10px; }
+
+        .client-item {
+            padding: 12px 15px; margin-bottom: 5px; border-radius: 5px; cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center;
+            transition: 0.3s; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .client-item:hover { background: rgba(255,255,255,0.05); }
+        .client-item.active { background: var(--accent); color: white; }
+        
+        .item-name { flex: 1; display: flex; align-items: center; gap: 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .icon-type { font-size: 12px; opacity: 0.7; }
+
+        .btn-delete {
+            background: rgba(255, 0, 0, 0.2); border: none; color: #ffcccc; 
+            padding: 4px 8px; border-radius: 4px; font-size: 12px; margin-left: 5px; cursor: pointer;
+        }
+        .btn-delete:hover { background: red; color: white; }
+
+        /* --- MAIN CONTENT --- */
+        .main-content {
+            flex: 1; display: flex; flex-direction: column; position: relative; background: white; height: 100vh;
+        }
+
+        .top-info-bar {
+            height: 40px; background: #eee; color: #333; display: flex; align-items: center;
+            justify-content: space-between; padding: 0 15px; font-size: 13px; border-bottom: 1px solid #ccc;
+        }
+        .top-bar-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .menu-btn-desktop {
+            background: none; border: 1px solid #aaa; color: #333; cursor: pointer;
+            padding: 4px 10px; border-radius: 4px;
+        }
+
+        iframe { width: 100%; flex: 1; border: none; }
+
+        /* --- OVERLAY --- */
+        .overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 25;
+        }
+
+        /* --- MODAL --- */
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 100;
+        }
+        .modal-content { background: var(--sidebar-bg); padding: 25px; border-radius: 8px; width: 90%; max-width: 400px; border: 1px solid #444; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #ccc; font-size: 14px; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #444; color: white; border-radius: 4px; }
+        
+        .tabs { display: flex; margin-bottom: 15px; border-bottom: 1px solid #444; }
+        .tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; background: #0f172a; color: #888; }
+        .tab.active { background: var(--accent); color: white; font-weight: bold; }
+
+        .input-section { display: none; }
+        .input-section.active { display: block; }
+
+        .welcome-screen {
+            display: flex; justify-content: center; align-items: center; flex-direction: column; 
+            height: 100%; color: #555; text-align: center; padding: 20px; background: #f0f2f5;
+        }
+
+        /* --- NEW FLOATING ADD BUTTON --- */
+        .floating-btn-add {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            width: 56px;
+            height: 56px;
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 28px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 99;
+            transition: transform 0.2s ease;
+        }
+        .floating-btn-add:hover {
+            transform: scale(1.05);
+        }
+
+        /* --- NEW MAIN MENU --- */
+        .main-menu {
+            display: none;
+            position: fixed;
+            top: var(--header-height);
+            right: 10px;
+            background-color: var(--sidebar-bg);
+            border: 1px solid #444;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            z-index: 101;
+            overflow: hidden;
+        }
+        .main-menu a {
+            display: block;
+            color: var(--text);
+            padding: 12px 25px;
+            text-decoration: none;
+            font-size: 15px;
+            border-bottom: 1px solid #444;
+            white-space: nowrap;
+        }
+        .main-menu a:last-child { border-bottom: none; }
+        .main-menu a:hover { background-color: var(--accent); }
+        
+        @media (max-width: 768px) {
+            .main-menu { top: var(--header-height); }
+        }
+
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 768px) {
+            .mobile-header { display: flex; }
+            .brand { display: none; }
+            .sidebar { position: fixed; top: 0; left: 0; bottom: 0; transform: translateX(-100%); padding-top: var(--header-height); }
+            .sidebar.show { transform: translateX(0); }
+            .overlay.show { display: block; }
+            .main-content { padding-top: var(--header-height); }
+            .top-info-bar { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Mobile Header -->
+<div class="mobile-header">
+    <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+    <span class="mobile-title" id="mobileTitle">Admin Hub</span>
+    <button class="menu-btn" onclick="toggleMainMenu()">⋮</button>
+</div>
+
+<div class="overlay" onclick="toggleSidebar()"></div>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+    <div class="brand">⚡ Admin Manager</div>
+    <div class="client-list" id="clientList">
+        <!-- List will generate here -->
+    </div>
+</div>
+
+<!-- Main Screen -->
+<div class="main-content">
+    <div class="top-info-bar" id="topBar">
+        <span id="currentClientName">Select an admin panel</span>
+        <div class="top-bar-right">
+            <a href="#" id="externalLink" target="_blank" style="color: blue; text-decoration: none; display:none;">Open in New Tab ↗</a>
+            <button class="menu-btn-desktop" onclick="toggleMainMenu()">Menu</button>
+        </div>
+    </div>
+    
+    <iframe id="adminFrame" name="adminFrame" src=""></iframe>
+
+    <div id="welcomeScreen" class="welcome-screen">
+        <h2>ড্যাশবোর্ডে স্বাগতম</h2>
+        <p>বাম পাশ থেকে একটি অ্যাডমিন প্যানেল সিলেক্ট করুন অথবা নতুন অ্যাড করুন।</p>
+    </div>
+</div>
+
+<!-- Floating Add Button -->
+<button class="floating-btn-add" onclick="openModal()">+</button>
+
+<!-- Main Menu Dropdown -->
+<div class="main-menu" id="mainMenu">
+    <a href="#">All Admins</a>
+    <a href="api.html">Img to Link</a>
+</div>
+
+<!-- Modal -->
+<div class="modal" id="addModal">
+    <div class="modal-content">
+        <h3 style="margin-bottom: 15px; color:white;">অ্যাডমিন প্যানেল যুক্ত করুন</h3>
+        
+        <div class="form-group">
+            <label>নাম (Client Name)</label>
+            <input type="text" id="cName" placeholder="যেমন: Company ABC">
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('link')">Link (URL)</div>
+            <div class="tab" onclick="switchTab('file')">File Upload</div>
+        </div>
+
+        <!-- URL Input Section -->
+        <div id="section-link" class="input-section active">
+            <div class="form-group">
+                <label>Website URL</label>
+                <input type="url" id="cUrl" placeholder="https://example.com/admin">
+            </div>
+        </div>
+
+        <!-- File Upload Section -->
+        <div id="section-file" class="input-section">
+            <div class="form-group">
+                <label>Upload HTML File (Max 2MB)</label>
+                <input type="file" id="cFile" accept=".html,.htm">
+                <small style="color: #888; font-size: 11px;">ফাইলটি ব্রাউজারে সেভ থাকবে।</small>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button class="btn-add" onclick="saveClient()">Save</button>
+            <button class="btn-add" style="background: #444;" onclick="closeModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let activeTab = 'link';
+    const mainMenu = document.getElementById('mainMenu');
+    document.addEventListener("DOMContentLoaded", loadSidebar);
+
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('show');
+        document.querySelector('.overlay').classList.toggle('show');
+    }
+    
+    // --- NEW: Main Menu ---
+    function toggleMainMenu() {
+        if (mainMenu.style.display === 'block') {
+            mainMenu.style.display = 'none';
+        } else {
+            mainMenu.style.display = 'block';
+        }
+    }
+    
+    // Close dropdowns if clicked outside
+    window.addEventListener('click', function(event) {
+        if (!mainMenu.contains(event.target) && !event.target.matches('.menu-btn, .menu-btn-desktop')) {
+            mainMenu.style.display = 'none';
+        }
+    });
+
+    // Modal & Tabs
+    function openModal() { document.getElementById('addModal').style.display = 'flex'; }
+    function closeModal() { document.getElementById('addModal').style.display = 'none'; clearInputs(); }
+    
+    function switchTab(tab) {
+        activeTab = tab;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.input-section').forEach(s => s.classList.remove('active'));
+        
+        if(tab === 'link') {
+            document.querySelector('.tab:nth-child(1)').classList.add('active');
+            document.getElementById('section-link').classList.add('active');
+        } else {
+            document.querySelector('.tab:nth-child(2)').classList.add('active');
+            document.getElementById('section-file').classList.add('active');
+        }
+    }
+
+    // Save Data
+    function saveClient() {
+        const name = document.getElementById('cName').value;
+        if(!name) { alert("দয়া করে নাম দিন"); return; }
+
+        if (activeTab === 'link') {
+            const url = document.getElementById('cUrl').value;
+            if(!url) { alert("দয়া করে লিংক দিন"); return; }
+            storeClient({ id: Date.now(), name, type: 'link', data: url });
+
+        } else {
+            const fileInput = document.getElementById('cFile');
+            if(fileInput.files.length === 0) { alert("দয়া করে ফাইল সিলেক্ট করুন"); return; }
+            
+            const file = fileInput.files[0];
+            if(file.size > 2000000) { alert("ফাইলটি অনেক বড়! ২MB এর নিচে ফাইল দিন।"); return; }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                // Saving file content as Base64 string
+                try {
+                    storeClient({ id: Date.now(), name, type: 'file', data: e.target.result });
+                } catch (error) {
+                    alert("মেমোরি ফুল! ফাইলটি সেভ করা যাচ্ছে না। আগের কিছু ডিলিট করুন।");
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function storeClient(clientObj) {
+        let clients = JSON.parse(localStorage.getItem('superAdminHub')) || [];
+        clients.push(clientObj);
+        try {
+            localStorage.setItem('superAdminHub', JSON.stringify(clients));
+        } catch(e) {
+            alert("Local storage is full. Cannot save new client.");
+            return;
+        }
+        closeModal();
+        loadSidebar();
+    }
+
+    // Load Sidebar
+    function loadSidebar() {
+        const listDiv = document.getElementById('clientList');
+        let clients = JSON.parse(localStorage.getItem('superAdminHub')) || [];
+        
+        listDiv.innerHTML = '';
+
+        if(clients.length === 0) {
+            listDiv.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">কোনো ডেটা নেই</div>';
+        }
+
+        clients.forEach(client => {
+            const div = document.createElement('div');
+            div.className = 'client-item';
+            const icon = client.type === 'link' ? '🔗' : '📂';
+            
+            div.innerHTML = `
+                <div class="item-name" onclick="loadFrame(${client.id}, this)">
+                    <span class="icon-type">${icon}</span> ${client.name}
+                </div>
+                <button class="btn-delete" onclick="deleteClient(${client.id})">Delete</button>
+            `;
+            listDiv.appendChild(div);
+        });
+    }
+
+    // Load Content in Iframe
+    function loadFrame(id, element) {
+        let clients = JSON.parse(localStorage.getItem('superAdminHub')) || [];
+        const client = clients.find(c => c.id === id);
+
+        if(!client) return;
+
+        // UI Updates
+        document.querySelectorAll('.client-item').forEach(el => el.classList.remove('active'));
+        if(element) element.closest('.client-item').classList.add('active');
+        document.getElementById('welcomeScreen').style.display = 'none';
+        document.getElementById('currentClientName').innerText = client.name;
+        document.getElementById('mobileTitle').innerText = client.name;
+        
+        const frame = document.getElementById('adminFrame');
+        const extLink = document.getElementById('externalLink');
+
+        if(client.type === 'link') {
+            frame.src = client.data;
+            extLink.style.display = 'block';
+            extLink.href = client.data;
+        } else {
+            // It's a file
+            frame.src = client.data; // Base64 Data URI
+            extLink.style.display = 'none';
+        }
+
+        if(window.innerWidth <= 768) toggleSidebar();
+    }
+
+    // Delete Client
+    function deleteClient(id) {
+        event.stopPropagation(); // Stop event from bubbling up to the parent div
+        if(confirm("আপনি কি নিশ্চিত এটি ডিলিট করতে চান?")) {
+            let clients = JSON.parse(localStorage.getItem('superAdminHub')) || [];
+            clients = clients.filter(c => c.id !== id);
+            localStorage.setItem('superAdminHub', JSON.stringify(clients));
+            
+            loadSidebar();
+            document.getElementById('adminFrame').src = 'about:blank';
+            document.getElementById('welcomeScreen').style.display = 'flex';
+            document.getElementById('currentClientName').innerText = 'Select an admin panel';
+            document.getElementById('mobileTitle').innerText = "Admin Hub";
+        }
+    }
+
+    function clearInputs() {
+        document.getElementById('cName').value = '';
+        document.getElementById('cUrl').value = '';
+        document.getElementById('cFile').value = '';
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Image Link Generator</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --secondary: #818cf8;
+            --bg: #0f172a;
+            --glass: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+
+        body {
+            background-color: var(--bg);
+            background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: var(--glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+
+        p.subtitle { color: #94a3b8; font-size: 14px; margin-bottom: 25px; }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 40px 20px;
+            cursor: pointer;
+            transition: 0.3s;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .upload-area:hover { border-color: var(--secondary); background: rgba(129, 140, 248, 0.05); }
+
+        .upload-icon { font-size: 40px; margin-bottom: 10px; display: block; }
+
+        /* Results */
+        .result-box { display: none; margin-top: 25px; text-align: left; animation: fadeIn 0.5s ease; }
+        
+        .preview-img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            margin-bottom: 15px;
+        }
+
+        .input-group { position: relative; margin-bottom: 15px; }
+        
+        label { font-size: 12px; color: #cbd5e1; display: block; margin-bottom: 5px; }
+
+        input[type="text"] {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            padding: 10px 15px;
+            padding-right: 70px;
+            border-radius: 8px;
+            color: #4ade80;
+            font-family: monospace;
+            outline: none;
+        }
+
+        .copy-btn {
+            position: absolute;
+            right: 5px;
+            top: 27px;
+            background: var(--primary);
+            border: none;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .copy-btn:hover { background: var(--secondary); }
+
+        /* Loader */
+        .loader {
+            display: none;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid var(--secondary);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Link Generator</h1>
+    <p class="subtitle">Upload image & get permanent direct link</p>
+
+    <!-- Upload Zone -->
+    <div class="upload-area" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <span class="upload-icon">📤</span>
+        <h3>Tap to Upload Image</h3>
+        <p style="font-size: 12px; color: #64748b; margin-top: 5px;">JPG, PNG, GIF Supported</p>
+        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+    </div>
+
+    <div class="loader" id="loader"></div>
+
+    <!-- Result Section -->
+    <div class="result-box" id="resultBox">
+        <img src="" id="previewImg" class="preview-img">
+        
+        <div class="input-group">
+            <label>Direct Link</label>
+            <input type="text" id="urlOutput" readonly>
+            <button class="copy-btn" onclick="copyText('urlOutput', this)">Copy</button>
+        </div>
+        
+        <div class="input-group">
+            <label>HTML Code</label>
+            <input type="text" id="htmlOutput" readonly>
+            <button class="copy-btn" onclick="copyText('htmlOutput', this)">Copy</button>
+        </div>
+        
+        <button onclick="location.reload()" style="width:100%; padding:10px; background:transparent; border:1px solid var(--border); color:#94a3b8; border-radius:8px; cursor:pointer;">Upload New Image</button>
+    </div>
+</div>
+
+<script>
+    // YOUR API KEY INTEGRATED HERE
+    const API_KEY = "e0299e236eaad76b2b296882581b51b7";
+
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const loader = document.getElementById('loader');
+    const resultBox = document.getElementById('resultBox');
+
+    // Drag & Drop Handling
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if(files.length) uploadImage(files[0]);
+    });
+
+    fileInput.addEventListener('change', function() {
+        if(this.files.length) uploadImage(this.files[0]);
+    });
+
+    function uploadImage(file) {
+        // UI Updates
+        document.querySelector('.subtitle').style.display = 'none';
+        dropZone.style.display = 'none';
+        loader.style.display = 'block';
+
+        const formData = new FormData();
+        formData.append("image", file);
+
+        fetch(`https://api.imgbb.com/1/upload?key=${API_KEY}`, {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            loader.style.display = 'none';
+            if (data.success) {
+                const link = data.data.url;
+                document.getElementById('previewImg').src = link;
+                document.getElementById('urlOutput').value = link;
+                document.getElementById('htmlOutput').value = `<img src="${link}" alt="image">`;
+                resultBox.style.display = 'block';
+            } else {
+                alert('Upload Failed: ' + data.status);
+                location.reload();
+            }
+        })
+        .catch(error => {
+            alert('Error connecting to server');
+            location.reload();
+        });
+    }
+
+    function copyText(id, btn) {
+        const input = document.getElementById(id);
+        input.select();
+        document.execCommand("copy");
+        const original = btn.innerText;
+        btn.innerText = "Copied!";
+        btn.style.background = "#22c55e";
+        setTimeout(() => {
+            btn.innerText = original;
+            btn.style.background = "var(--primary)";
+        }, 1500);
+    }
+</script>
+
+</body>
+</html>
